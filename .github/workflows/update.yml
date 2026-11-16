@@ -13,7 +13,7 @@ jobs:
     # Apple Silicon runner, so the new version can be built before committing.
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: cachix/install-nix-action@v31
 
       - name: Check for a new release
