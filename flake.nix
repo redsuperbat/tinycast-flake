@@ -41,7 +41,6 @@
 
       options = lib: {
         enable = lib.mkEnableOption "Tinycast";
-        launchAtLogin = lib.mkEnableOption "starting Tinycast at login";
         launcherShortcut = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
@@ -85,13 +84,6 @@
           "hotkey.togglePalette" = builtins.toJSON shortcut;
         };
 
-      # Tinycast's own login item uses SMAppService, which only the app can register.
-      # `open` does nothing if Tinycast is already running.
-      loginAgent = app: {
-        ProgramArguments = [ "/usr/bin/open" "-a" app ];
-        RunAtLoad = true;
-      };
-
       # macOS ties permissions such as Accessibility to the app's path, so copy the
       # app to a fixed location instead of running it from a changing /nix/store path.
       copyApp = pkg: dest: ''
@@ -117,10 +109,6 @@
             targets.darwin.defaults.${bundleId} = preferences lib cfg;
             home.activation.tinycast = lib.hm.dag.entryAfter [ "writeBoundary" ]
               (copyApp (pkgs.callPackage package { }) "$HOME/Applications/Tinycast.app");
-            launchd.agents.tinycast = lib.mkIf cfg.launchAtLogin {
-              enable = true;
-              config = loginAgent "${config.home.homeDirectory}/Applications/Tinycast.app";
-            };
           };
         };
 
@@ -132,9 +120,6 @@
             system.defaults.CustomUserPreferences.${bundleId} = preferences lib cfg;
             system.activationScripts.postActivation.text = lib.mkAfter
               (copyApp (pkgs.callPackage package { }) "/Applications/Tinycast.app");
-            launchd.user.agents.tinycast = lib.mkIf cfg.launchAtLogin {
-              serviceConfig = loginAgent "/Applications/Tinycast.app";
-            };
           };
         };
 
