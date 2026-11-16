@@ -5,6 +5,7 @@
 
   outputs = { self, nixpkgs }:
     let
+      bundleId = "com.abueammar.tinycast";
       package = { lib, stdenvNoCC, fetchurl, _7zz }:
         stdenvNoCC.mkDerivation (finalAttrs: {
           pname = "tinycast";
@@ -40,6 +41,25 @@
     in
     {
       overlays.default = final: prev: { tinycast = final.callPackage package { }; };
+
+      # Install Tinycast and turn off its built-in updater, which cannot write to
+      # the Nix store. The setting lives in UserDefaults, so the app stays unmodified.
+      homeManagerModules.default = { config, lib, pkgs, ... }: {
+        options.programs.tinycast.enable = lib.mkEnableOption "Tinycast";
+        config = lib.mkIf config.programs.tinycast.enable {
+          home.packages = [ (pkgs.callPackage package { }) ];
+          targets.darwin.defaults.${bundleId}.automaticallyCheckForUpdates = false;
+        };
+      };
+
+      darwinModules.default = { config, lib, pkgs, ... }: {
+        options.programs.tinycast.enable = lib.mkEnableOption "Tinycast";
+        config = lib.mkIf config.programs.tinycast.enable {
+          environment.systemPackages = [ (pkgs.callPackage package { }) ];
+          # Applies to system.primaryUser.
+          system.defaults.CustomUserPreferences.${bundleId}.automaticallyCheckForUpdates = false;
+        };
+      };
 
       packages.aarch64-darwin = rec {
         tinycast = nixpkgs.legacyPackages.aarch64-darwin.callPackage package { };

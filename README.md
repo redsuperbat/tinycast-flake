@@ -16,7 +16,7 @@ nix build github:redsuperbat/tinycast-flake
 open result/Applications/Tinycast.app
 ```
 
-## Install with nix-darwin or Home Manager
+## Install with Home Manager or nix-darwin
 
 Add the flake as an input:
 
@@ -25,25 +25,27 @@ inputs.tinycast.url = "github:redsuperbat/tinycast-flake";
 inputs.tinycast.inputs.nixpkgs.follows = "nixpkgs";
 ```
 
-Then use the package directly:
+Then import the module for your setup and enable it:
 
 ```nix
-home.packages = [ inputs.tinycast.packages.aarch64-darwin.default ];
-# or, in nix-darwin:
-environment.systemPackages = [ inputs.tinycast.packages.aarch64-darwin.default ];
+# Home Manager
+imports = [ inputs.tinycast.homeManagerModules.default ];
+programs.tinycast.enable = true;
+
+# or nix-darwin (the setting applies to system.primaryUser)
+imports = [ inputs.tinycast.darwinModules.default ];
+programs.tinycast.enable = true;
 ```
 
-Or use the overlay and refer to `pkgs.tinycast`:
+The module installs Tinycast and turns off its built-in updater. The updater cannot
+replace an app in the read-only Nix store, so updates come through this flake instead:
+run `nix flake update tinycast`.
 
-```nix
-nixpkgs.overlays = [ inputs.tinycast.overlays.default ];
-```
+If you only want the package, use `inputs.tinycast.packages.aarch64-darwin.default`, or
+add `inputs.tinycast.overlays.default` to `nixpkgs.overlays` and refer to `pkgs.tinycast`.
 
 ## Things to know
 
-- **Turn off the built-in updater.** The app cannot update itself inside the read-only
-  Nix store. Disable automatic update checks in Tinycast's General settings and update
-  through this flake instead (`nix flake update tinycast`).
 - **macOS permissions may need granting again after updates.** macOS links permissions
   such as Accessibility and Automation to the app's location. Each update moves the app
   to a new `/nix/store` path, so you may be asked again. Tools that copy apps to a fixed
