@@ -1,0 +1,48 @@
+name: Update Tinycast
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    # Apple Silicon runner, so the new version can be built before committing.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Check for a new release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api repos/abue-ammar/tinycast/releases/latest --jq .tag_name | sed 's/^v//')
+          current=$(sed -n 's/.*version = "\(.*\)";/\1/p' flake.nix)
+          echo "current=$current latest=$latest"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          [ "$latest" != "$current" ] && echo "update=true" >> "$GITHUB_OUTPUT" || true
+
+      - name: Update version and hash
+        if: steps.check.outputs.update == 'true'
+        env:
+          VERSION: ${{ steps.check.outputs.latest }}
+        run: |
+          hash=$(nix store prefetch-file --json \
+            "https://github.com/abue-ammar/tinycast/releases/download/v$VERSION/Tinycast-$VERSION.dmg" | jq -r .hash)
+          sed -i '' -e "s|version = \".*\";|version = \"$VERSION\";|" \
+                    -e "s|hash = \"sha256-.*\";|hash = \"$hash\";|" flake.nix
+          nix build
+          test -d result/Applications/Tinycast.app
+
+      - name: Commit and push
+        if: steps.check.outputs.update == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "tinycast: update to ${{ steps.check.outputs.latest }}"
+          git push
