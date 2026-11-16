@@ -28,30 +28,43 @@ inputs.tinycast.inputs.nixpkgs.follows = "nixpkgs";
 Then import the module for your setup and enable it:
 
 ```nix
-# Home Manager
+# Home Manager: installs to ~/Applications/Tinycast.app
 imports = [ inputs.tinycast.homeManagerModules.default ];
-programs.tinycast.enable = true;
 
-# or nix-darwin (the setting applies to system.primaryUser)
+# or nix-darwin: installs to /Applications/Tinycast.app for system.primaryUser
 imports = [ inputs.tinycast.darwinModules.default ];
-programs.tinycast.enable = true;
+
+programs.tinycast = {
+  enable = true;
+  launcherShortcut = "option+space"; # optional
+};
 ```
 
-The module installs Tinycast and turns off its built-in updater. The updater cannot
-replace an app in the read-only Nix store, so updates come through this flake instead:
-run `nix flake update tinycast`.
+The module:
+
+- **Installs the app at a fixed path.** macOS ties permissions such as Accessibility and
+  Automation to an app's location. The module copies Tinycast out of the Nix store, so
+  updates keep the same path and you don't have to grant permissions again. It copies
+  only when the version changes.
+- **Turns off the built-in updater.** Updates come through this flake instead: run
+  `nix flake update tinycast`. Quit and reopen Tinycast after an update.
+- **Sets the launcher shortcut**, if you give one. Write modifiers and a key joined by
+  `+`. Modifiers: `cmd`, `shift`, `option` (or `alt`), `ctrl`. Keys: `a`–`z`, `0`–`9`,
+  `space`, `return`, `tab`, `escape`, `f1`–`f12`. If you leave it out, you set the
+  shortcut in Tinycast's settings as usual.
+
+Both settings are written to Tinycast's preferences on every switch, so changes made in
+the app are replaced by your Nix config.
 
 If you only want the package, use `inputs.tinycast.packages.aarch64-darwin.default`, or
 add `inputs.tinycast.overlays.default` to `nixpkgs.overlays` and refer to `pkgs.tinycast`.
 
 ## Things to know
 
-- **macOS permissions may need granting again after updates.** macOS links permissions
-  such as Accessibility and Automation to the app's location. Each update moves the app
-  to a new `/nix/store` path, so you may be asked again. Tools that copy apps to a fixed
-  location, such as [mac-app-util](https://github.com/hraban/mac-app-util), can help.
 - **The app is not modified.** The flake unpacks the upstream `.dmg` and copies the app
   as is, so the original code signature stays valid.
+- **The plain package runs from the Nix store.** If you use the package or overlay
+  without a module, macOS may ask for permissions again after each update.
 
 ## License
 
