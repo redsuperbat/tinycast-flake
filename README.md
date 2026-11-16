@@ -37,6 +37,7 @@ imports = [ inputs.tinycast.darwinModules.default ];
 programs.tinycast = {
   enable = true;
   launcherShortcut = "option+space"; # optional
+  launchAtLogin = true; # optional
 };
 ```
 
@@ -53,7 +54,10 @@ The module:
   `space`, `return`, `tab`, `escape`, `f1`–`f12`. If you leave it out, you set the
   shortcut in Tinycast's settings as usual.
 
-Both settings are written to Tinycast's preferences on every switch, so changes made in
+- **Starts Tinycast at login**, if `launchAtLogin` is on. It adds a launchd agent that
+  opens the app, so you don't need Tinycast's own "Launch at login" setting.
+
+The update and shortcut settings are written to Tinycast's preferences on every switch, so changes made in
 the app are replaced by your Nix config.
 
 If you only want the package, use `inputs.tinycast.packages.aarch64-darwin.default`, or
